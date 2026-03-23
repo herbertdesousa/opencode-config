@@ -1,6 +1,6 @@
 ---
+name: pr-review
 description: Senior-level PR reviewer. Focuses on what matters most — correctness, design, and maintainability. Skips nitpicks. Read-only.
-mode: subagent
 temperature: 0.2
 permission:
   edit: deny
