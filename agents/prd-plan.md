@@ -40,7 +40,7 @@ Allowed work:
 - read relevant files
 - analyze business and technical context
 - define scope and task slicing
-- write PRD, task list, contracts notes, and progress notes
+- write PRD, task list, questions, and task-level technical planning when needed
 
 ## Planning Workspace
 
@@ -56,12 +56,14 @@ Required files:
 
 - `.ai/feature/<task-name>/prd.md`
 - `.ai/feature/<task-name>/tasks.yml`
-- `.ai/feature/<task-name>/progress.md`
-- `.ai/feature/<task-name>/changes/contracts.md` when contracts are affected
 
 Conditional file:
 
 - `.ai/feature/<task-name>/questions.yml` when planning reveals questions that block, narrow, or materially reshape the refinement
+
+Conditional directory:
+
+- `.ai/feature/<task-name>/tasks-planning/` when one or more tasks need deeper technical refinement before execution
 
 ## `questions.yml` Contract
 
@@ -101,37 +103,33 @@ Rules for `questions.yml`:
 5. Reset workflow context before planning by overwriting these files from zero:
    - `.ai/feature/<task-name>/prd.md`
    - `.ai/feature/<task-name>/tasks.yml`
-   - `.ai/feature/<task-name>/progress.md`
-   - `.ai/feature/<task-name>/changes/contracts.md`
-6. Start `progress.md` immediately so planning progress is visible while you work.
-7. Normalize the request context:
-   - problema de negocio
-   - objetivo
-   - usuarios ou fluxos afetados
-   - restricoes, dependencias, ou contexto operacional
-8. Identify planning questions that are still open after reading the user context and any existing `questions.yml` answers.
-9. Build or refresh `.ai/feature/<task-name>/questions.yml` when those questions materially affect scope, sequencing, acceptance criteria, contracts, rollout, or operational design.
-10. Build `prd.md` from scratch with:
-   - problema de negocio
-   - objetivo
-   - escopo e nao-escopo
-   - criterios de aceite
-   - riscos e dependencias
-   - estrategia de testes (TDD) por criterio de aceite
-11. When answered questions exist, reorganize the refinement around those answers instead of keeping the previous assumption-based shape.
-12. Build `tasks.yml` from scratch with context-oriented tasks that are PR-oriented:
-   - `id`
-   - `title`
-   - `status: todo`
-   - `repositories`
-   - `pr_scope`
-   - `acceptance_criteria`
-   - `dependencies`
-   - `test_strategy`
-13. If DTO, API, event, schema, or other contracts are affected, write the expected impact in `changes/contracts.md`.
-14. Append planning decision summary to `progress.md`, including which questions were answered, which remain open, and how they changed the plan.
-15. Make the result clearly executable by `#task-exec`, including a recommended next command such as `#task-exec 1` when the plan is actionable.
-16. If unresolved P0 questions remain, mark the planning result as partially blocked and direct the user to answer `questions.yml` before expecting final refinement quality.
+6. Normalize the request context:
+    - problema de negocio
+    - objetivo
+    - usuarios ou fluxos afetados
+    - restricoes, dependencias, ou contexto operacional
+7. Identify planning questions that are still open after reading the user context and any existing `questions.yml` answers.
+8. Build or refresh `.ai/feature/<task-name>/questions.yml` when those questions materially affect scope, sequencing, acceptance criteria, contracts, rollout, or operational design.
+9. Build `prd.md` from scratch with:
+    - problema de negocio
+    - objetivo
+    - escopo e nao-escopo
+    - criterios de aceite
+    - riscos e dependencias
+    - estrategia de testes (TDD) por criterio de aceite
+10. When answered questions exist, reorganize the refinement around those answers instead of keeping the previous assumption-based shape.
+11. Build `tasks.yml` from scratch with context-oriented tasks that are PR-oriented:
+    - `id`
+    - `title`
+    - `status: todo`
+    - `repositories`
+    - `pr_scope`
+    - `acceptance_criteria`
+    - `dependencies`
+    - `test_strategy`
+12. For complex work, write per-task technical refinements under `.ai/feature/<task-name>/tasks-planning/` using the static structure defined in this document.
+13. Make the result clearly executable by `#task-exec`, including a recommended next command such as `#task-exec 1` when the plan is actionable.
+14. If unresolved P0 questions remain, mark the planning result as partially blocked and direct the user to answer `questions.yml` before expecting final refinement quality.
 
 ## Task Slicing Rules (PR-Oriented)
 
@@ -152,41 +150,108 @@ Rules for `questions.yml`:
 - Prefer unit tests for business logic and calculations when behavior does not depend on DB internals.
 - Map each acceptance criterion to explicit tests in `prd.md` or `tasks.yml`.
 
-## `progress.md` Requirements
+## `tasks-planning` Requirements
 
-`progress.md` is the live planning status file.
+`tasks-planning` is the optional deep technical planning layer for complex tasks.
 
-Write it so a human can open the file at any moment and understand:
+Create task-planning files when the task needs more detail than `tasks.yml` can express safely, especially for:
 
-- current planning status
-- what has already been analyzed
-- what remains open
-- why the proposed plan was chosen
-- what command should be run next
+- multi-step backend flows
+- external integrations
+- async processing
+- state machines or status transitions
+- migrations or persistence-sensitive behavior
+- authorization or policy-heavy flows
+- high-risk edge cases
 
-Update `progress.md` in stages. At minimum include:
+Use one file per task with a stable selector filename, such as `1.md` or `T-2.md`.
 
-1. planning status (`not_started`, `in_progress`, `planned`, or `blocked`)
-2. current step
-3. findings so far
-4. open questions or risks
-5. selected approach
-6. planning decision summary
-7. recommended next command such as `#task-exec 1`
-8. reference to `questions.yml` when present, including answered vs open questions
+Follow this structure closely:
+
+1. `# Task <selector> - <title>`
+2. `## Objetivo`
+3. `## Fluxo detalhado`
+4. `## Criterios de aceite`
+5. `## Diagrama Mermaid` when it materially helps execution
+6. `## Endpoint com cURL` only when the task touches an API contract or endpoint behavior
+7. `## Notas`
+
+Rules for `tasks-planning/*.md`:
+
+- Keep the file purely technical; do not repeat business narrative unnecessarily.
+- Refine sequencing, components touched, inputs/outputs, persistence effects, side effects, and validation expectations.
+- Explore edge cases and technical failure modes deeply.
+- Document idempotency, retries, locking/concurrency, consistency boundaries, auditability, observability, and backward compatibility whenever relevant.
+- Use representative endpoint examples only when an API is involved.
+- Keep the content directly actionable by `#task-exec`.
+
+Example shape:
+
+```md
+# Task 1 - Concise technical title
+
+## Objetivo
+
+Describe the technical outcome the task must deliver.
+
+## Fluxo detalhado
+
+1. Describe the main execution path in sequence.
+2. Call out validations, persistence, integrations, state transitions, and async boundaries.
+3. Include unhappy paths, retries, and idempotency points when relevant.
+
+## Criterios de aceite
+
+- observable technical outcomes
+- persisted states or side effects
+- contract or behavior guarantees
+
+## Diagrama Mermaid
+
+```mermaid
+sequenceDiagram
+  participant A as Client
+  participant B as API
+  participant C as Worker
+  A->>B: request
+  B->>C: async dispatch
+  C-->>B: processed
+  B-->>A: response
+```
+
+## Endpoint com cURL
+
+Include only when the task touches an API.
+
+```bash
+curl -X POST "https://api.example.com/resource" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "example": true
+  }'
+```
+
+## Notas
+
+- dependencies
+- edge cases
+- operational constraints
+- follow-up technical caveats
+```
 
 ## Output Contract
 
 - Planning artifacts are ready for later execution by `#task-exec`.
 - The output is written under `.ai/feature/<task-name>/...`.
 - `tasks.yml` is structured so a single selector can be resolved by `#task-exec`.
-- `progress.md` clearly shows the planning progress and final recommendation.
 - `questions.yml` is created when material open questions exist and reused as input on later `#prd-plan` runs.
+- `tasks-planning/*.md` is created for tasks that need deeper technical refinement.
 
 ## Rules
 
 - Do not execute implementation tasks.
 - Do not mark tasks as done in this phase.
-- Rebuild PRD, tasks, progress, and contracts from scratch for each run, but do reuse stakeholder answers from `questions.yml` when present.
+- Rebuild PRD and tasks from scratch for each run, and refresh `questions.yml` when needed, but do reuse stakeholder answers from `questions.yml` when present.
 - Keep the plan pragmatic, reviewable, and directly tied to business value.
 - Be aware of performance, reliability, observability, accessibility, maintainability, privacy, and security.
